@@ -1,28 +1,206 @@
-[
-  {
-    "ruc": "1790775941001",
-    "factura": "001-001-000058773",
-    "fechaEntrega": "21-10-2025",
-    "horaEntrega": "11:00 am",
-    "emailFrom": "zackharo1@gmail.com",
-    "emailSubject": "PRUEBA 3",
-    "emailDate": "2025-11-07T13:10:50.000Z",
-    "textoguia": "MEDICAMENTA ECUATORIANA S.A.\nNombre comercial: ADIUM\nDir. Matriz: AV. 6 DE DICIEMBRE Y CALLE JUAN\nDir. Sucursal: AV. 6 DE DICIEMBRE Y CALLE JUAN BOUSSINGAULT\nESQUINA, ED. TORRE 6 PISO 12, OFICINA 1201\nContribuyente Especial Nro.: 5368\nOBLIGADO A LLEVAR CONTABILIDAD: SI\nR.U.C.: 1790775941001\nG U Í A D E R E M I S I Ó N\nNo. 001-001-000049949\nESTADO SRI: AUTORIZADO\nNÚMERO DE AUTORIZACIÓN:\n2010202506179077594100120010010000499491790775911\nFECHA Y HORA DE AUTORIZACIÓN:\n20/10/2025 08:58:46\nAMBIENTE: PRODUCCIÓN\nEMISIÓN: NORMAL\nCLAVE DE ACCESO:\n2010202506179077594100120010010000499491790775911\nCEDULA (Transportista): 1715314835\nRazón Social / Nombres y Apellidos: NUÑEZ LUCIO ORLANDO RAMIRO\nPlaca: PCA9763\nPunto de Partida: AV. 6 DE DICIEMBRE Y CALLE JUAN BOUSSINGAULT ESQUINA, ED. TORRE 6 PISO 12, OFICINA 1201\nFecha inicio Transporte: 20/10/2025 Fecha fin Transporte: 27/10/2025\nComprobante de Venta: FACTURA 001-001-000058773 Fecha de Emisión: 20/10/2025\nNúmero de Autorización:\nMotivo Traslado: Ventas\nDestino (Punto de llegada): AV. ELOY ALFARO N53-94 Y LOSPINOS\nRUC / CI (Destinatario): 1791817680001\nRazón Social / Nombres y Apellidos: SOCIEDAD DE LUCHA CONTRA EL CANCER\nDocumento Aduanero:\nCódigo Establecimiento Destino:\nRuta:\nCantidad Descripción Código Principal Código Auxiliar\n60.00 DAPAGLIFOZINA COMPRIMIDO RECUBIERTO 10MG 951809\nInformación Adicional\nUbicacion Lete036\nGran Contribuyente NAC-GCFOIOC21-00001340-E\nPágina 1 de1",
-    "textofactura": "MEDICAMENTA ECUATORIANA S.A.\nNombre comercial: ADIUM\nDir. Matriz: AV. 6 DE DICIEMBRE Y CALLE JUAN BOUSSINGAULT\nESQUINA, ED. TORRE 6 PISO 12, OFICINA 1201\nDir. Sucursal: AV. 6 DE DICIEMBRE Y CALLE JUAN BOUSSINGAULT\nESQUINA, ED. TORRE 6 PISO 12, OFICINA 1201\nContribuyente Especial Nro.: 5368\nOBLIGADO A LLEVAR CONTABILIDAD: SI\nR.U.C.: 1790775941001\nF A C T U R A\nNº. 001-001-000058773\nESTADO SRI: AUTORIZADO\nNÚMERO DE AUTORIZACIÓN:\n2010202501179077594100120010010000587731790775912\nFECHA Y HORA DE AUTORIZACIÓN:\n20/10/2025 08:48:41\nAMBIENTE: PRODUCCIÓN\nEMISIÓN: NORMAL\nCLAVE DE ACCESO:\n2010202501179077594100120010010000587731790775912\nRazón Social / Nombres y Apellidos: SOCIEDAD DE LUCHA CONTRA EL CANCER RUC: 1791817680001\nFecha Emisión: 20/10/2025\nCod.\nPrincipal \nCant. Descripción \nDetalle\nAdicional \nDetalle\nAdicional \nPrecio\nUnitario \nDescuento Precio Total\n951809 60.00 DAPAGLIFOZINA COMPRIMIDO\nRECUBIERTO 10MG \nLote:\n75515 \nFechaVec.:\n30/06/2027 \n1.00 0.00 60.00\nPAGOS\nPAGO PLAZO DE PAGO FORMA DE PAGO TOTAL A PAGAR\n1 90 Dias OTROS CON UTILIZACIÓN DEL SISTEMA FINANCIERO 60.00\nSUBTOTAL 15% 0.00\nSUBTOTAL 0% 60.00\nSUBTOTAL No objeto de IVA 0.00\nEXENTO DE IVA 0.00\nSUBTOTAL SIN IMPUESTOS 60.00\nDESCUENTO 0.00\nICE 0.00\nIVA 15% 0.00\nVALOR TOTAL 60.00\nInformación Adicional\nObservaciones NP MAIL OC17585-X1\nForma de Pago 90 FCHA FC\nOV OV294083\nDireccion AV. ELOY ALFARO N53-94 Y LOS PINOS\nEstablecimiento Quito Pichincha\nGran Contribuyente NAC-GCFOIOC21-00001340-E\nPágina 1 de1"
+{
+  "name": "Leer PDFs de Gmail y Extraer Facturas",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Traer resultados del query de empresas y los datos estandarizados\nconst ids_empresas = $('Query Empresas').all();\nconst data = $('Estandarizar Información').all(); // array de facturas y guías\n\n// Filtrar solo facturas\nconst facturas = data.filter(item => item.json.factura);\n\n// Función para obtener fecha local Ecuador en formato ISO\nfunction fechaISOEcuador() {\n  const ahora = new Date();\n  const formato = new Intl.DateTimeFormat(\"sv-SE\", {\n    timeZone: \"America/Guayaquil\",\n    year: \"numeric\",\n    month: \"2-digit\",\n    day: \"2-digit\",\n    hour: \"2-digit\",\n    minute: \"2-digit\",\n    second: \"2-digit\"\n  }).format(ahora);\n\n  return formato.replace(\" \", \"T\");\n}\n\n// Transformar y conectar con el EMP_ID según el RUC\nconst transformadas = facturas.map(f => {\n  // Buscar empresa_id correspondiente\n  const empresa = ids_empresas.find(e => e.json.EMP_IDENTIFICACION === f.json.ruc);\n  const empresa_id = empresa ? empresa.json.EMP_ID : null;\n\n  return {\n    empresa_id,\n    cliente_id: null,\n    zona_id: null,\n    categoria_producto_id: null,\n    hora_entrega_id: null,\n    tipo_entrega_id: null,\n    tipo_producto_entregar_id: null,\n    tipo_empaque_id: null,\n    vehiculo_id: null,\n    empresa_estibas_id: null,\n    confirmacion_entrega_id: null,\n    seguimiento_dataloger_id: null,\n    atribuible_id: null,\n    nro_delivery: f.json.factura,\n    nro_factura_cliente: f.json.factura,\n    dia_entrega: f.json.fechaEntrega,\n    representante: f.json.emailFrom,\n    observacion: f.json.emailSubject,\n    datos_adjuntos: null,\n    fecha_entrega_factura_qx: null,\n    hora_entrega_factura_qx: f.json.horaEntrega,\n    no_empaques: null,\n    nro_entrega_sap: null,\n    nro_bultos: null,\n    nro_pallets: null,\n    fecha_asign_transporte: null,\n    hora_asign_transporte: null,\n    estibas: null,\n    no_estiba: null,\n    fecha_despacho: null,\n    hora_despacho: null,\n    documento_transporte: null,\n    fecha_efectiva_entrega: null,\n    hora_efectiva_inicio_entrega: null,\n    hora_efectiva_fin_entrega: null,\n    novedad_entrega: null,\n    activo: null,\n    creado_por: null,\n    actualizado_por: null,\n    fecha_creacion: fechaISOEcuador(),\n    fecha_actualizacion: fechaISOEcuador()\n  };\n});\n\nreturn transformadas.map(r => ({ json: r }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        -224
+      ],
+      "id": "78455022-0344-46ef-8a2e-6cd755170187",
+      "name": "JSON antes de guardar en base"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.all(); // Tu array original\nconst emailBody = $('Gmail').first().json.text;\n\n// Meses en español\nconst meses = {\n  'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04',\n  'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08',\n  'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12'\n};\n\n// Extraer fecha\nlet fechaEntrega = 'No encontrada';\nconst dateMatch = emailBody.match(/(\\d{1,2})\\s+de\\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i);\nif (dateMatch) {\n  const dia = dateMatch[1].padStart(2, '0');\n  const mes = meses[dateMatch[2].toLowerCase()];\n  const anio = '2025';\n  fechaEntrega = `${dia}-${mes}-${anio}`;\n}\n\n// Extraer hora\nlet horaEntrega = 'No encontrada';\nconst timeMatch = emailBody.match(/(\\d{1,2}:\\d{2}\\s*(?:am|pm|AM|PM))/i);\nif (timeMatch) {\n  horaEntrega = timeMatch[1];\n}\n\n// Arrays\nconst guias = [];\nconst facturas = [];\n\n// Recorrer JSON\nfor (const entry of data) {\n  // ✅ TIPO GUÍA\n  if (entry.tipo === 'GuiaRemision' || entry.json?.tipo === 'GuiaRemision') {\n    const items = entry.items || entry.json.items;\n    items.forEach(item => {\n      const pdf = item.pdfText;\n\n      // Numero factura\n      const matchFactura = pdf.match(/FACTURA\\s*([\\d-]+)/i);\n\n      // RUC empresa emisora\n      const matchRuc = pdf.match(/R\\.U\\.C\\.\\s*:\\s*(\\d{13})/i);\n      const ruc = matchRuc ? matchRuc[1] : 'No encontrado';\n\n      if (matchFactura) {\n        guias.push({\n          numeroFactura: matchFactura[1],\n          texto: pdf,\n          ruc\n        });\n      }\n    });\n  }\n\n  // ✅ TIPO FACTURA\n  else if (entry.tipo === 'Factura' || entry.json?.tipo === 'Factura') {\n    const items = entry.items || entry.json.items;\n\n    items.forEach(item => {\n      const pdf = item.pdfText || item.json.pdfText;\n\n      // Número factura\n      const matchFactura = pdf.match(/Nº\\.\\s*([\\d-]+)/i);\n\n      // RUC empresa emisora\n      const matchRuc = pdf.match(/R\\.U\\.C\\.\\s*:\\s*(\\d{13})/i);\n      const ruc = matchRuc ? matchRuc[1] : 'No encontrado';\n\n      if (matchFactura) {\n        facturas.push({\n          numeroFactura: matchFactura[1],\n          texto: pdf,\n          ruc\n        });\n      }\n    });\n  }\n}\n\n// ✅ Emparejar guía con factura\nconst resultadoFinal = guias.map(g => {\n  const factura = facturas.find(f => f.numeroFactura === g.numeroFactura);\n\n  return {\n    ruc: g.ruc,  // ✅ agregado según tu pedido\n    factura: g.numeroFactura,\n    fechaEntrega,\n    horaEntrega,\n    emailFrom: $('Gmail').first().json.from.value[0].address,\n    emailSubject: $('Gmail').first().json.subject,\n    emailDate: $('Gmail').first().json.date,\n    textoguia: g.texto,\n    textofactura: factura ? factura.texto : 'No encontrada'\n  };\n});\n\n// ✅ Agregar conteo\nresultadoFinal.push({\n  guias: guias.length,\n  facturas: facturas.length\n});\n\nreturn resultadoFinal.map(r => ({ json: r }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        -224
+      ],
+      "id": "aa9ca30f-99bc-4639-a66a-398445f2e8cf",
+      "name": "Estandarizar Información"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Inicializar arreglos para cada tipo\nconst guiasRemision = [];\nconst facturas = [];\n\nfor (const item of $input.all()) {\n  // Tomar el texto del PDF\n  const pdfText = item.json.text || item.json.data || '';\n  const filename = item.json.pdfFilename || '';\n\n  // Normalizar el texto para evitar problemas de mayúsculas/minúsculas\n  const textLower = pdfText.toLowerCase();\n\n  // Si es guía de remisión\n  if (textLower.includes('g u í a d e r e m i s i ó n') || textLower.includes('guia de remision')) {\n    guiasRemision.push({\n        pdfText: pdfText // agregamos el texto completo extraído\n    });\n  }\n\n  // Si es factura\n  else if (textLower.includes('f a c t u r a') || textLower.includes('factura') || filename.toLowerCase().includes('factura')) {\n    facturas.push({\n      json: {\n        pdfText: pdfText // agregamos el texto completo extraído\n      }\n    });\n  }\n}\n\n// Devolver ambas listas con todo el contenido de cada PDF\nreturn [\n  { json: { tipo: 'GuiaRemision', items: guiasRemision } },\n  { json: { tipo: 'Factura', items: facturas } }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        -224
+      ],
+      "id": "93009130-f806-43e6-8a55-43c554ea06cc",
+      "name": "Separar Pdf por Guia Remision y Factura"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        272,
+        -224
+      ],
+      "id": "fb758204-2834-47fe-bf11-f4ab48b9378a",
+      "name": "Gmail",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aMnZ48yQ5zeLzjbv",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -224
+      ],
+      "id": "e25a2121-9e6b-4647-bba9-d579b3177f16",
+      "name": "Extraer texto del PDF"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtrar y separar solo los PDFs\nconst outputItems = [];\nlet pdfCounter = 1;\n\nfor (const item of $input.all()) {\n  // Buscar en todas las propiedades binarias\n  const binaryData = item.binary || {};\n  \n  for (const [key, value] of Object.entries(binaryData)) {\n    const filename = value.fileName || value.filename || '';\n    \n    // Verificar si es un PDF\n    if (filename.toLowerCase().endsWith('.pdf')) {\n      outputItems.push({\n        json: {\n          ...item.json,\n          pdfNumber: pdfCounter,\n          pdfFilename: filename,\n          binaryKey: key,\n          emailBody: item.json.textPlain || item.json.textHtml || item.json.snippet || ''\n        },\n        binary: {\n          data: value\n        }\n      });\n      pdfCounter++;\n    }\n  }\n}\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        -224
+      ],
+      "id": "33185e18-504a-457d-8bb3-fd57b298b7cc",
+      "name": "Filtrar PDFs"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT EMP_ID, EMP_IDENTIFICACION\nFROM TBL_EMPRESA\nWHERE EMP_IDENTIFICACION = '{{ $json.ruc }}'"
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1.1,
+      "position": [
+        1376,
+        -224
+      ],
+      "id": "5e5b1d24-ac28-4089-b059-ac7d86079ee1",
+      "name": "Query Empresas",
+      "credentials": {
+        "microsoftSql": {
+          "id": "9ZVagpxkJK452lkI",
+          "name": "Microsoft SQL account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "JSON antes de guardar en base": {
+      "main": [
+        []
+      ]
+    },
+    "Estandarizar Información": {
+      "main": [
+        [
+          {
+            "node": "Query Empresas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar Pdf por Guia Remision y Factura": {
+      "main": [
+        [
+          {
+            "node": "Estandarizar Información",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "main": [
+        [
+          {
+            "node": "Filtrar PDFs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer texto del PDF": {
+      "main": [
+        [
+          {
+            "node": "Separar Pdf por Guia Remision y Factura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar PDFs": {
+      "main": [
+        [
+          {
+            "node": "Extraer texto del PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Empresas": {
+      "main": [
+        [
+          {
+            "node": "JSON antes de guardar en base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  {
-    "ruc": "1790775941001",
-    "factura": "001-001-000058772",
-    "fechaEntrega": "21-10-2025",
-    "horaEntrega": "11:00 am",
-    "emailFrom": "zackharo1@gmail.com",
-    "emailSubject": "PRUEBA 3",
-    "emailDate": "2025-11-07T13:10:50.000Z",
-    "textoguia": "MEDICAMENTA ECUATORIANA S.A.\nNombre comercial: ADIUM\nDir. Matriz: AV. 6 DE DICIEMBRE Y CALLE JUAN\nDir. Sucursal: AV. 6 DE DICIEMBRE Y CALLE JUAN BOUSSINGAULT\nESQUINA, ED. TORRE 6 PISO 12, OFICINA 1201\nContribuyente Especial Nro.: 5368\nOBLIGADO A LLEVAR CONTABILIDAD: SI\nR.U.C.: 1790775941001\nG U Í A D E R E M I S I Ó N\nNo. 001-001-000049948\nESTADO SRI: AUTORIZADO\nNÚMERO DE AUTORIZACIÓN:\n2010202506179077594100120010010000499481790775916\nFECHA Y HORA DE AUTORIZACIÓN:\n20/10/2025 08:58:46\nAMBIENTE: PRODUCCIÓN\nEMISIÓN: NORMAL\nCLAVE DE ACCESO:\n2010202506179077594100120010010000499481790775916\nCEDULA (Transportista): 1715314835\nRazón Social / Nombres y Apellidos: NUÑEZ LUCIO ORLANDO RAMIRO\nPlaca: PCA9763\nPunto de Partida: AV. 6 DE DICIEMBRE Y CALLE JUAN BOUSSINGAULT ESQUINA, ED. TORRE 6 PISO 12, OFICINA 1201\nFecha inicio Transporte: 20/10/2025 Fecha fin Transporte: 27/10/2025\nComprobante de Venta: FACTURA 001-001-000058772 Fecha de Emisión: 20/10/2025\nNúmero de Autorización:\nMotivo Traslado: Ventas\nDestino (Punto de llegada): AV. ELOY ALFARO N53-94 Y LOSPINOS\nRUC / CI (Destinatario): 1791817680001\nRazón Social / Nombres y Apellidos: SOCIEDAD DE LUCHA CONTRA EL CANCER\nDocumento Aduanero:\nCódigo Establecimiento Destino:\nRuta:\nCantidad Descripción Código Principal Código Auxiliar\n240.00 DAPAGLIFOZINA COMPRIMIDO RECUBIERTO 10MG 951809\nInformación Adicional\nUbicacion Lete036\nGran Contribuyente NAC-GCFOIOC21-00001340-E\nPágina 1 de1",
-    "textofactura": "MEDICAMENTA ECUATORIANA S.A.\nNombre comercial: ADIUM\nDir. Matriz: AV. 6 DE DICIEMBRE Y CALLE JUAN BOUSSINGAULT\nESQUINA, ED. TORRE 6 PISO 12, OFICINA 1201\nDir. Sucursal: AV. 6 DE DICIEMBRE Y CALLE JUAN BOUSSINGAULT\nESQUINA, ED. TORRE 6 PISO 12, OFICINA 1201\nContribuyente Especial Nro.: 5368\nOBLIGADO A LLEVAR CONTABILIDAD: SI\nR.U.C.: 1790775941001\nF A C T U R A\nNº. 001-001-000058772\nESTADO SRI: AUTORIZADO\nNÚMERO DE AUTORIZACIÓN:\n2010202501179077594100120010010000587721790775917\nFECHA Y HORA DE AUTORIZACIÓN:\n20/10/2025 08:48:39\nAMBIENTE: PRODUCCIÓN\nEMISIÓN: NORMAL\nCLAVE DE ACCESO:\n2010202501179077594100120010010000587721790775917\nRazón Social / Nombres y Apellidos: SOCIEDAD DE LUCHA CONTRA EL CANCER RUC: 1791817680001\nFecha Emisión: 20/10/2025\nCod.\nPrincipal \nCant. Descripción \nDetalle\nAdicional \nDetalle\nAdicional \nPrecio\nUnitario \nDescuento Precio Total\n951809 240.00 DAPAGLIFOZINA COMPRIMIDO\nRECUBIERTO 10MG \nLote:\n75515 \nFechaVec.:\n30/06/2027 \n1.00 0.00 240.00\nPAGOS\nPAGO PLAZO DE PAGO FORMA DE PAGO TOTAL A PAGAR\n1 90 Dias OTROS CON UTILIZACIÓN DEL SISTEMA FINANCIERO 240.00\nSUBTOTAL 15% 0.00\nSUBTOTAL 0% 240.00\nSUBTOTAL No objeto de IVA 0.00\nEXENTO DE IVA 0.00\nSUBTOTAL SIN IMPUESTOS 240.00\nDESCUENTO 0.00\nICE 0.00\nIVA 15% 0.00\nVALOR TOTAL 240.00\nInformación Adicional\nObservaciones NP MAIL OC:17724-X1\nForma de Pago 90 FCHA FC\nOV OV293844\nDireccion AV. ELOY ALFARO N53-94 Y LOS PINOS\nEstablecimiento Quito Pichincha\nGran Contribuyente NAC-GCFOIOC21-00001340-E\nPágina 1 de1"
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
   },
-  {
-    "guias": 2,
-    "facturas": 2
-  }
-]
+  "versionId": "e2f1e503-1975-4d64-8ac9-fc79240dbdcc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1a9b02fa3633aab9840a886f39057040de095b9f61e9688619e96e949ba177dd"
+  },
+  "id": "DuYNHLGVZKDzg8oH",
+  "tags": []
+}

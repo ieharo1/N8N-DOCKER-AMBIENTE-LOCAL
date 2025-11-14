@@ -1,0 +1,311 @@
+{
+  "name": "Leer PDFs de Gmail y Extraer Facturas",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Traer resultados del merge\nconst data = $('Merge').all();\n\n// Filtrar solo facturas\nconst facturas = data.filter(item => item.json.factura);\n\n// Función para obtener fecha local Ecuador en formato ISO\nfunction fechaISOEcuador() {\n  const ahora = new Date();\n  const formato = new Intl.DateTimeFormat(\"sv-SE\", {\n    timeZone: \"America/Guayaquil\",\n    year: \"numeric\",\n    month: \"2-digit\",\n    day: \"2-digit\",\n    hour: \"2-digit\",\n    minute: \"2-digit\",\n    second: \"2-digit\"\n  }).format(ahora);\n\n  return formato.replace(\" \", \"T\");\n}\n\n// Transformar y conectar con el EMP_ID según el RUC\nconst transformadas = facturas.map(f => {\n  return {\n    empresa_id: f.json.EMP_ID,\n    cliente_id: f.json.CLI_ID,\n    zona_id: null,\n    categoria_producto_id: null,\n    hora_entrega_id: f.json.LISTA_HORAS_ID,\n    tipo_entrega_id: null,\n    tipo_producto_entregar_id: null,\n    tipo_empaque_id: null,\n    vehiculo_id: null,\n    empresa_estibas_id: null,\n    confirmacion_entrega_id: null,\n    seguimiento_dataloger_id: null,\n    atribuible_id: null,\n    nro_delivery: f.json.factura,\n    nro_factura_cliente: f.json.factura,\n    dia_entrega: f.json.fechaEntrega,\n    representante: f.json.representante,\n    observacion: f.json.CLI_DIRECCION,\n    datos_adjuntos: null,\n    fecha_entrega_factura_qx: null,\n    hora_entrega_factura_qx: f.json.horaEntrega,\n    no_empaques: null,\n    nro_entrega_sap: null,\n    nro_bultos: null,\n    nro_pallets: null,\n    fecha_asign_transporte: null,\n    hora_asign_transporte: null,\n    estibas: null,\n    no_estiba: null,\n    fecha_despacho: null,\n    hora_despacho: null,\n    documento_transporte: null,\n    fecha_efectiva_entrega: null,\n    hora_efectiva_inicio_entrega: null,\n    hora_efectiva_fin_entrega: null,\n    novedad_entrega: null,\n    activo: null,\n    creado_por: null,\n    actualizado_por: null,\n    fecha_creacion: fechaISOEcuador(),\n    fecha_actualizacion: fechaISOEcuador()\n  };\n});\n\nreturn transformadas.map(r => ({ json: r }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1872,
+        -208
+      ],
+      "id": "78455022-0344-46ef-8a2e-6cd755170187",
+      "name": "JSON antes de guardar en base"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.all(); // Tu array original\nconst emailBody = $(\"Outlook\").first().json.bodyPreview;\n\n// Meses en español\nconst meses = {\n  enero: \"01\",\n  febrero: \"02\",\n  marzo: \"03\",\n  abril: \"04\",\n  mayo: \"05\",\n  junio: \"06\",\n  julio: \"07\",\n  agosto: \"08\",\n  septiembre: \"09\",\n  octubre: \"10\",\n  noviembre: \"11\",\n  diciembre: \"12\",\n};\n\n// Extraer fecha\nlet fechaEntrega = \"No encontrada\";\nconst dateMatch = emailBody.match(\n  /(\\d{1,2})\\s+de\\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i\n);\nif (dateMatch) {\n  const dia = dateMatch[1].padStart(2, \"0\");\n  const mes = meses[dateMatch[2].toLowerCase()];\n  const anio = \"2025\";\n  fechaEntrega = `${dia}-${mes}-${anio}`;\n}\n\n// Extraer hora\nlet horaEntrega = \"No encontrada\";\nconst timeMatch = emailBody.match(/(\\d{1,2}:\\d{2}\\s*(?:am|pm|AM|PM))/i);\nif (timeMatch) {\n  horaEntrega = timeMatch[1];\n}\n\n// Extraer representante\nlet representante = null;\nconst bodyClean = emailBody\n  .replace(/\\r?\\n+/g, \" \")\n  .replace(/\\s{2,}/g, \" \")\n  .replace(/saludos cordiales.*$/i, \"\")\n  .replace(/atentamente.*$/i, \"\")\n  .trim();\n\nconst repMatch = bodyClean.match(\n  /(?:representante|responsable|persona de entrega)[^a-zA-Z0-9]{0,5}(?:es|:|-)?\\s*([A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑ\\s.'-]+)/i\n);\n\nif (repMatch) {\n  representante = repMatch[1]\n    .replace(/\\b(ADICIONAL|TOMAR|SECTOR|REFERENCIA|CONTACTO|ENTREGA|CELULAR|TELÉFONO|EMAIL|CORREO).*$/i, \"\")\n    .replace(/\\b(Sr\\.?|Sra\\.?|Srta\\.?|Ing\\.?|Lic\\.?|Dr\\.?|Dra\\.?)\\b/gi, \"\")\n    .replace(/\\b(de|la|el|los|las)\\b/gi, \"\")\n    .replace(/[^A-ZÁÉÍÓÚÑa-záéíóúñ\\s-]/g, \"\")\n    .replace(/\\s{2,}/g, \" \")\n    .trim()\n    .toLowerCase()\n    .replace(/\\b[a-záéíóúñ]/g, (l) => l.toUpperCase());\n}\n\n// Arrays\nconst guias = [];\nconst facturas = [];\n\n// Recorrer JSON\nfor (const entry of data) {\n  const items = entry.items || entry.json?.items || [];\n\n  if (entry.tipo === \"GuiaRemision\" || entry.json?.tipo === \"GuiaRemision\") {\n    items.forEach((item) => {\n      const pdf = item.pdfText;\n      if (!pdf) return;\n\n      const matchFactura = pdf.match(/FACTURA\\s*([\\d-]+)/i);\n      const matchRuc = pdf.match(/R\\.U\\.C\\.\\s*:\\s*(\\d{13})/i);\n      const ruc = matchRuc ? matchRuc[1] : \"No encontrado\";\n\n      const matchCliente = [...pdf.matchAll(/Razón Social \\/ Nombres y Apellidos:\\s*(.+)/g)];\n      const nombreCliente =\n        matchCliente.length > 1\n          ? matchCliente[1][1].trim()\n          : matchCliente[0]?.[1]?.trim() || \"No encontrado\";\n\n      const matchDestino = pdf.match(/Destino \\(Punto de llegada\\):\\s*(.+)/i);\n      const direccionDestino = matchDestino ? matchDestino[1].trim() : \"No encontrada\";\n\n      if (matchFactura) {\n        guias.push({\n          numeroFactura: matchFactura[1],\n          texto: pdf,\n          ruc,\n          nombreCliente,\n          direccionDestino,\n          binary: item.binary?.data || null, // <-- guardamos el PDF\n        });\n      }\n    });\n  } else if (entry.tipo === \"Factura\" || entry.json?.tipo === \"Factura\") {\n    items.forEach((item) => {\n      const pdf = item.pdfText || item.json?.pdfText;\n      if (!pdf) return;\n\n      const matchFactura = pdf.match(/Nº\\.\\s*([\\d-]+)/i);\n      const matchRuc = pdf.match(/R\\.U\\.C\\.\\s*:\\s*(\\d{13})/i);\n      const ruc = matchRuc ? matchRuc[1] : \"No encontrado\";\n\n      if (matchFactura) {\n        facturas.push({\n          numeroFactura: matchFactura[1],\n          texto: pdf,\n          ruc,\n          binary: item.binary?.data || null, // <-- guardamos el PDF\n        });\n      }\n    });\n  }\n}\n\n// Emparejar guía con factura\nconst resultadoFinal = guias.map((g) => {\n  const factura = facturas.find((f) => f.numeroFactura === g.numeroFactura);\n\n  return {\n    ruc: g.ruc,\n    nombre_cliente: g.nombreCliente,\n    direccion_cliente: g.direccionDestino,\n    factura: g.numeroFactura,\n    fechaEntrega,\n    horaEntrega,\n    representante,\n    emailFrom: $(\"Outlook\").first().json.from,\n    emailSubject: $(\"Outlook\").first().json.subject,\n    emailDate: $(\"Outlook\").first().json.date,\n    textoguia: g.texto,\n    textofactura: factura ? factura.texto : \"No encontrada\",\n    binario_pdf_guia: g.binary?.data || null,\n    binario_pdf_factura: factura?.binary?.data || null,\n  };\n});\n\n// Agregar conteo\nresultadoFinal.push({\n  guias: guias.length,\n  facturas: facturas.length,\n});\n\nreturn resultadoFinal.map((r) => ({ json: r }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        -224
+      ],
+      "id": "aa9ca30f-99bc-4639-a66a-398445f2e8cf",
+      "name": "Estandarizar Información"
+    },
+    {
+      "parameters": {
+        "jsCode": "const guiasRemision = [];\nconst facturas = [];\n\nfor (const item of $input.all()) {\n  const pdfText = item.json.text || item.json.data || '';\n  const filename = (item.json.pdfFilename || '').toLowerCase();\n  const binary = item.binary || $input.item.binary || {}; // 🔹 Usamos el binario original del PDF\n\n  const textLower = pdfText.toLowerCase();\n\n  const esGuia =\n    textLower.includes('guia de remision') ||\n    textLower.includes('g u í a d e r e m i s i ó n') ||\n    filename.includes('guia');\n\n  const esFactura =\n    textLower.includes('factura') ||\n    textLower.includes('f a c t u r a') ||\n    filename.includes('factura');\n\n  if (esGuia) {\n    guiasRemision.push({\n      pdfText,\n      pdfFilename: filename,\n      binary // 🔹 mantenemos el binario original\n    });\n  } else if (esFactura) {\n    facturas.push({\n      pdfText,\n      pdfFilename: filename,\n      binary // 🔹 mantenemos el binario original\n    });\n  }\n}\n\nreturn [\n  { json: { tipo: 'GuiaRemision', items: guiasRemision } },\n  { json: { tipo: 'Factura', items: facturas } }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        -224
+      ],
+      "id": "93009130-f806-43e6-8a55-43c554ea06cc",
+      "name": "Separar Pdf por Guia Remision y Factura"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {
+          "keepSource": "binary"
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -224
+      ],
+      "id": "e25a2121-9e6b-4647-bba9-d579b3177f16",
+      "name": "Extraer texto del PDF"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtrar y separar solo los PDFs\nconst outputItems = [];\nlet pdfCounter = 1;\n\nfor (const item of $input.all()) {\n  // Buscar en todas las propiedades binarias\n  const binaryData = item.binary || {};\n  \n  for (const [key, value] of Object.entries(binaryData)) {\n    const filename = value.fileName || value.filename || '';\n    \n    // Verificar si es un PDF\n    if (filename.toLowerCase().endsWith('.pdf')) {\n      outputItems.push({\n        json: {\n          ...item.json,\n          pdfNumber: pdfCounter,\n          pdfFilename: filename,\n          binaryKey: key,\n          emailBody: item.json.textPlain || item.json.textHtml || item.json.snippet || ''\n        },\n        binary: {\n          data: value\n        }\n      });\n      pdfCounter++;\n    }\n  }\n}\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        -224
+      ],
+      "id": "33185e18-504a-457d-8bb3-fd57b298b7cc",
+      "name": "Filtrar PDFs"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT TOP 1 EMP_ID, EMP_IDENTIFICACION\nFROM TBL_EMPRESA\nWHERE EMP_IDENTIFICACION = '{{ $json.ruc }}'\n"
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1.1,
+      "position": [
+        1392,
+        -448
+      ],
+      "id": "5e5b1d24-ac28-4089-b059-ac7d86079ee1",
+      "name": "Query Empresas",
+      "credentials": {
+        "microsoftSql": {
+          "id": "9ZVagpxkJK452lkI",
+          "name": "Microsoft SQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {},
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlookTrigger",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -224
+      ],
+      "id": "c2de43f7-20be-4721-ba3e-eb543261af6e",
+      "name": "Outlook",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "hScHVMBY2AwoACoN",
+          "name": "Microsoft Outlook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 4,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1648,
+        -240
+      ],
+      "id": "efa9cb3c-7804-4f76-b060-006c29ec7956",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT TOP 1\n    CLI_ID,\n    CLI_NOMBRE,\n    CLI_DIRECCION\nFROM TBL_CLIENTE\nWHERE \n    UPPER(REPLACE(REPLACE(REPLACE(REPLACE(CLI_NOMBRE, '  ', ' '), '.', ''), '-', ''), ',', '')) \n        LIKE '%' + UPPER(REPLACE(REPLACE(REPLACE(REPLACE('{{ $json[\"nombre_cliente\"] }}', '  ', ' '), '.', ''), '-', ''), ',', '')) + '%'\n    AND (\n        UPPER(REPLACE(REPLACE(REPLACE(REPLACE(CLI_DIRECCION, '  ', ' '), '.', ''), '-', ''), ',', '')) \n            LIKE '%' + UPPER(REPLACE(REPLACE(REPLACE(REPLACE('{{ $json[\"direccion_cliente\"] }}', '  ', ' '), '.', ''), '-', ''), ',', '')) + '%'\n        OR UPPER(REPLACE(REPLACE(REPLACE(REPLACE('{{ $json[\"direccion_cliente\"] }}', '  ', ' '), '.', ''), '-', ''), ',', ''))\n            LIKE '%' + UPPER(REPLACE(REPLACE(REPLACE(REPLACE(CLI_DIRECCION, '  ', ' '), '.', ''), '-', ''), ',', '')) + '%'\n    )\nORDER BY LEN(CLI_DIRECCION) DESC;\n"
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1.1,
+      "position": [
+        1392,
+        -304
+      ],
+      "id": "1d04c7d8-32f6-4783-a2f4-be5aa724fef9",
+      "name": "Query Cliente",
+      "credentials": {
+        "microsoftSql": {
+          "id": "9ZVagpxkJK452lkI",
+          "name": "Microsoft SQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DECLARE @horaEntregaRaw NVARCHAR(50) = '{{ $json[\"horaEntrega\"] }}';\nDECLARE @horaEntregaTime TIME;\n\n-- ✅ 1. Limpieza y conversión de hora\nSET @horaEntregaRaw = LTRIM(RTRIM(LOWER(@horaEntregaRaw)));\nSET @horaEntregaRaw = REPLACE(@horaEntregaRaw, '.', '');\nSET @horaEntregaRaw = REPLACE(@horaEntregaRaw, ' a m', 'am');\nSET @horaEntregaRaw = REPLACE(@horaEntregaRaw, ' p m', 'pm');\nSET @horaEntregaRaw = REPLACE(@horaEntregaRaw, ' a. m.', 'am');\nSET @horaEntregaRaw = REPLACE(@horaEntregaRaw, ' p. m.', 'pm');\n\nSET @horaEntregaTime = TRY_CONVERT(TIME, @horaEntregaRaw, 0);\n\n-- ❌ Si no se puede convertir, devolvemos \"Durante el día\"\nIF @horaEntregaTime IS NULL\nBEGIN\n    SELECT TOP 1 \n        id AS LISTA_HORAS_ID, \n        nombre AS LISTA_HORAS_NOMBRE\n    FROM TBL_LISTA_HORAS\n    WHERE nombre = 'Durante el día';\n    RETURN;\nEND;\n\n-- ✅ 2. Convertimos la hora a formato numérico 1100, 1430, etc.\nDECLARE @horaNum INT = DATEPART(HOUR, @horaEntregaTime) * 100 \n                      + CASE WHEN DATEPART(MINUTE, @horaEntregaTime) >= 30 THEN 30 ELSE 0 END;\n\n-- ✅ 3. Si la hora está fuera del rango (6am a 5pm), devolvemos “Durante el día”\nIF @horaNum < 600 OR @horaNum > 1700\nBEGIN\n    SELECT TOP 1 \n        id AS LISTA_HORAS_ID, \n        nombre AS LISTA_HORAS_NOMBRE\n    FROM TBL_LISTA_HORAS\n    WHERE nombre = 'Durante el día';\n    RETURN;\nEND;\n\n-- ✅ 4. Buscamos el bloque horario correcto\nSELECT TOP 1 \n    id AS LISTA_HORAS_ID, \n    nombre AS LISTA_HORAS_NOMBRE\nFROM TBL_LISTA_HORAS\nWHERE \n    nombre LIKE 'Hasta las%' \n    AND TRY_CAST(\n        REPLACE(REPLACE(\n            SUBSTRING(\n                nombre,\n                CASE WHEN CHARINDEX('Hasta las ', nombre) > 0 \n                     THEN CHARINDEX('Hasta las ', nombre) + 10 \n                     ELSE 0 END,\n                8\n            ), ':', ''), ' ', '') AS INT\n    ) >= @horaNum\nORDER BY TRY_CAST(\n        REPLACE(REPLACE(\n            SUBSTRING(\n                nombre,\n                CASE WHEN CHARINDEX('Hasta las ', nombre) > 0 \n                     THEN CHARINDEX('Hasta las ', nombre) + 10 \n                     ELSE 0 END,\n                8\n            ), ':', ''), ' ', '') AS INT\n    ) ASC;\n"
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1.1,
+      "position": [
+        1392,
+        -112
+      ],
+      "id": "6026c1a1-24c2-4215-8690-4b7210ed0b30",
+      "name": "Query Hora Entrega",
+      "credentials": {
+        "microsoftSql": {
+          "id": "9ZVagpxkJK452lkI",
+          "name": "Microsoft SQL account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "JSON antes de guardar en base": {
+      "main": [
+        []
+      ]
+    },
+    "Estandarizar Información": {
+      "main": [
+        [
+          {
+            "node": "Query Empresas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Query Cliente",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Query Hora Entrega",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Separar Pdf por Guia Remision y Factura": {
+      "main": [
+        [
+          {
+            "node": "Estandarizar Información",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer texto del PDF": {
+      "main": [
+        [
+          {
+            "node": "Separar Pdf por Guia Remision y Factura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar PDFs": {
+      "main": [
+        [
+          {
+            "node": "Extraer texto del PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Empresas": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outlook": {
+      "main": [
+        [
+          {
+            "node": "Filtrar PDFs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Cliente": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "JSON antes de guardar en base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Hora Entrega": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "30f92479-a243-4865-bebb-316e55dcd93a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1a9b02fa3633aab9840a886f39057040de095b9f61e9688619e96e949ba177dd"
+  },
+  "id": "DuYNHLGVZKDzg8oH",
+  "tags": []
+}
