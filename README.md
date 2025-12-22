@@ -39,3 +39,10 @@ N8N-DOCKER-AMBIENTE-LOCAL/
 ├── n8n_data/
 │   └── (datos persistentes de n8n)
 └── README.md
+
+
+
+✍️ Autor
+
+Isaac Haro
+Proyecto: N8N-DOCKER-AMBIENTE-LOCAL
