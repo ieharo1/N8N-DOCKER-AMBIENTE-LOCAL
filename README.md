@@ -1,50 +1,44 @@
-🚀 N8N – Ambiente Local con Docker
+# 🤖 N8N - Ambiente Local con Docker
 
 Repositorio público para levantar n8n en un ambiente local usando Docker Compose, con persistencia de datos, autenticación básica y soporte para webhooks externos mediante ngrok.
 
-📌 Descripción
+---
+
+## 📝 Descripción
 
 Este proyecto permite desplegar n8n de forma rápida, segura y reproducible en un entorno local utilizando Docker.
 
 Está pensado para:
 
-Desarrollo de flujos
+- Desarrollo de flujos
+- Pruebas de automatización
+- Integraciones con APIs
+- Exposición temporal de webhooks
+- Simulación de entornos productivos
 
-Pruebas de automatización
+---
 
-Integraciones con APIs
+## 🧱 Stack Tecnológico
 
-Exposición temporal de webhooks
+- Docker
+- Docker Compose v3.8
+- n8n (imagen oficial)
+- ngrok (para webhooks externos)
+- Autenticación básica HTTP
+- Persistencia de datos local
 
-Simulación de entornos productivos
+---
 
-🧱 Stack Tecnológico
+## 📂 Estructura del Proyecto
 
-🐳 Docker
-
-🐳 Docker Compose v3.8
-
-⚙️ n8n (imagen oficial)
-
-🌐 ngrok (para webhooks externos)
-
-🔐 Autenticación básica HTTP
-
-💾 Persistencia de datos local
-
-📂 Estructura del Proyecto
+```
 N8N-DOCKER-AMBIENTE-LOCAL/
 ├── docker-compose.yml
 ├── .env
 ├── n8n_data/
 │   └── (datos persistentes de n8n)
 └── README.md
-
-
-
-✍️ Autor
-
-Isaac Haro
+```
 
 ---
 
@@ -62,4 +56,3 @@ Isaac Haro
 ## 📄 Licencia
 
 © 2026 Isaac Esteban Haro Torres - Todos los derechos reservados.
-Proyecto: N8N-DOCKER-AMBIENTE-LOCAL
